@@ -122,6 +122,7 @@ class Runner(object):
         mon = Monitor(self.process)
         mon.start()
         (stdout, stderr) = self.process.communicate()
+        self.process.wait()
         mon.stop()
         mon.join()
         result = {}

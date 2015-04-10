@@ -46,7 +46,7 @@ class Monitoring(threading.Thread):
                 if not message:
                     continue
                 message = message.replace(self.message, "")
-                self.log.info("\rMemory: %s" % float(message.strip())/1024**3)
+                self.log.info("Memory: %s" % (float(message.strip())/1024**3))
 
     def stop(self):
         self.running = False

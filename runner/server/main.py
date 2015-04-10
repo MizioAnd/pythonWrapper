@@ -116,8 +116,9 @@ class Runner(object):
         # now execute matlabscript
         now = datetime.datetime.utcnow()
 
-        self.process = psutil.Popen(["matlabscript2014", "-n", str(pdict["nicenessVal"]), "-c", str(pdict["cpuRangeVal"]),
-                                     "LinTimelyOscSolCurrent"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        self.process = psutil.Popen(["matlabscript2014", "-n", str(pdict["nicenessVal"]), "-c",
+                                    str(pdict["cpuRangeVal"]), "LinTimelyOscSolCurrent"], stderr=subprocess.PIPE,
+                                    stdout=subprocess.PIPE)
         mon = Monitor(self.process)
         mon.start()
         (stdout, stderr) = self.process.communicate()

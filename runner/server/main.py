@@ -2,6 +2,7 @@
 """
 @since 09/04/2015
 """
+import SocketServer
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 from argparse import ArgumentParser
 import signal
@@ -13,6 +14,7 @@ import threading
 import os
 import time
 import shutil
+import zmq
 
 __author__ = 'sposs'
 
@@ -25,6 +27,11 @@ def get_dummy():
     return True
 
 
+class ThreadedSJONRPCServer(SocketServer.ThreadingMixIn, SimpleJSONRPCServer):
+    def __init__(self, *args, **kwargs):
+        SimpleJSONRPCServer.__init__(self, *args, **kwargs)
+
+
 class Monitor(threading.Thread):
     """
     This thing takes care of monitoring
@@ -35,10 +42,13 @@ class Monitor(threading.Thread):
         self.process = process
         self.peak = 0
         self.avg = 0
+        context = zmq.Context.instance()
+        self.socket = context.socket(zmq.PUB)
+        self.socket.bind("tcp://*:47802")
 
     def stop(self):
         self.running = False
-
+        
     def run(self):
         meas = 0
         vals = 0
@@ -48,11 +58,12 @@ class Monitor(threading.Thread):
             else:
                 mem = 0
             for child in self.process.children():
-               if len(child.memory_info_ex()) > 1:
-                   mem += child.memory_info_ex()[1]
+                if len(child.memory_info_ex()) > 1:
+                    mem += child.memory_info_ex()[1]
             if mem > self.peak:
-               self.peak = mem
+                self.peak = mem
             meas += 1
+            self.socket.send_string("memory %s" % mem)
             vals += mem
             time.sleep(1)
         self.avg = float(vals)/meas
@@ -73,6 +84,7 @@ class Runner(object):
         signal.signal(signal.SIGTERM, self.stop)
         signal.signal(signal.SIGINT, self.stop)
         self.path_to_svn_repo = repo_path
+        self.process = None
 
     def stop(self, signum, frame):
         self.finalize()
@@ -97,18 +109,18 @@ class Runner(object):
         # Start by svn upping
         subprocess.check_call(["svn", "up"])
         os.chdir(curdir)
-	if os.path.isdir(pdict["outputDir"]) and rmdir:
-            shutil.rmtree(pdict["outputDir"])
+        if os.path.isdir(pdict["outputDir"]) and rmdir:
+                shutil.rmtree(pdict["outputDir"])
         os.makedirs(pdict["outputDir"])
         os.chdir(pdict["outputDir"])
         # now execute matlabscript
         now = datetime.datetime.utcnow()
 
-        process = psutil.Popen(["matlabscript2014", "-n", str(pdict["nicenessVal"]), "-c", str(pdict["cpuRangeVal"]),
-                                "LinTimelyOscSolCurrent"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        mon = Monitor(process)
+        self.process = psutil.Popen(["matlabscript2014", "-n", str(pdict["nicenessVal"]), "-c", str(pdict["cpuRangeVal"]),
+                                     "LinTimelyOscSolCurrent"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        mon = Monitor(self.process)
         mon.start()
-        (stdout, stderr) = process.communicate()
+        (stdout, stderr) = self.process.communicate()
         mon.stop()
         mon.join()
         result = {}
@@ -118,13 +130,21 @@ class Runner(object):
         result["StdOut"] = stdout
         result["StdErr"] = stderr
         os.chdir(curdir)
-        print result
         return result
+
+    def kill(self):
+        """
+        Kill the program
+        :return: None
+        """
+        self.log.info("Killing program")
+        self.process.terminate()
 
     def run(self):
         self.log.info("Serving on %s:%s" % (self.host, self.port))
-        self._server = SimpleJSONRPCServer((self.host, self.port))
+        self._server = ThreadedSJONRPCServer((self.host, self.port))
         self._server.register_function(self.execute)
+        self._server.register_function(self.kill)
         self._server.register_function(get_dummy, "ping")
         self._server.register_introspection_functions()
         self._server.serve_forever()

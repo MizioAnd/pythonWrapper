@@ -1,3 +1,4 @@
 pbr
 psutil
 jsonrpclib
+pyzmq

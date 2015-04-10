@@ -116,6 +116,7 @@ class Client(object):
                                                       res["Wallclock"], res["peak"]/1024.**3, res["avg"]/1024**3)
         self.log.info("date \t\t\t message \t\t cpu \t outputdir \t time \t peak_mem \t avg_mem")
         self.log.info(resstr)
+        self.log.info(res["StdOut"])
         with open(os.path.expanduser("~/result.dat"), "a") as out:
             out.write(resstr+"\n")
 

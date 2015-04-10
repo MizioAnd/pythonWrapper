@@ -116,11 +116,13 @@ class Runner(object):
         # now execute matlabscript
         now = datetime.datetime.utcnow()
 
-        self.process = psutil.Popen(["matlabscript2014", "-n", str(pdict["nicenessVal"]), "-c", str(pdict["cpuRangeVal"]),
-                                     "LinTimelyOscSolCurrent"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        self.process = psutil.Popen(["matlabscript2014", "-n", str(pdict["nicenessVal"]), "-c",
+                                    str(pdict["cpuRangeVal"]), "LinTimelyOscSolCurrent"], stderr=subprocess.PIPE,
+                                    stdout=subprocess.PIPE)
         mon = Monitor(self.process)
         mon.start()
         (stdout, stderr) = self.process.communicate()
+        self.process.wait()
         mon.stop()
         mon.join()
         result = {}
@@ -138,7 +140,9 @@ class Runner(object):
         :return: None
         """
         self.log.info("Killing program")
-        self.process.terminate()
+        for child in self.process.children(True):
+            child.kill()
+        self.process.kill()
 
     def run(self):
         self.log.info("Serving on %s:%s" % (self.host, self.port))

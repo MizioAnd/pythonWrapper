@@ -139,6 +139,8 @@ class Runner(object):
         :return: None
         """
         self.log.info("Killing program")
+        for child in self.process.children():
+            child.kill()
         self.process.kill()
 
     def run(self):

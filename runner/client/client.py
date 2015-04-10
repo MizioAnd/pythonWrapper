@@ -21,19 +21,26 @@ class Monitoring(threading.Thread):
     """
     def __init__(self, host):
         threading.Thread.__init__(self)
+        self.log = logging.getLogger(self.__class__.__name__)
+        self.log.addHandler(logging.StreamHandler())
+        self.log.setLevel(logging.INFO)
         context = zmq.Context.instance()
         self.socket = context.socket(zmq.SUB)
         self.message = u"memory"
         self.socket.setsockopt_string(zmq.SUBSCRIBE, self.message)
         self.socket.connect("tcp://%s:47802" % host)
-        time.sleep(0.1)
+        time.sleep(0.5)
         self.running = True
         self.poll = zmq.Poller()
         self.poll.register(self.socket, zmq.POLLIN)
 
     def run(self):
         while self.running:
-            socks = self.poll.poll(1000)
+            try:
+                socks = dict(self.poll.poll(1000))
+            except zmq.error.ZMQError as error:
+                self.log.error(error)
+                break
             if self.socket in socks:
                 message = self.socket.recv_string()
                 if not message:

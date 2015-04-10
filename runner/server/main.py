@@ -138,7 +138,7 @@ class Runner(object):
         :return: None
         """
         self.log.info("Killing program")
-        self.process.terminate()
+        self.process.kill()
 
     def run(self):
         self.log.info("Serving on %s:%s" % (self.host, self.port))

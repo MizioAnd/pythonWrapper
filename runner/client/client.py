@@ -36,7 +36,11 @@ class Monitoring(threading.Thread):
 
     def run(self):
         while self.running:
-            socks = self.poll.poll(1000)
+            try:
+                socks = dict(self.poll.poll(1000))
+            except zmq.error.ZMQError as error:
+                self.log.error(error)
+                break
             if self.socket in socks:
                 message = self.socket.recv_string()
                 if not message:

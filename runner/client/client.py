@@ -23,7 +23,7 @@ class Monitoring(threading.Thread):
         threading.Thread.__init__(self)
         context = zmq.Context.instance()
         self.socket = context.socket(zmq.SUB)
-        self.message = "memory"
+        self.message = u"memory"
         self.socket.setsockopt_string(zmq.SUBSCRIBE, self.message)
         self.socket.connect("tcp://%s:47802" % host)
         time.sleep(0.1)

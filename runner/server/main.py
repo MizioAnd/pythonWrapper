@@ -15,6 +15,7 @@ import os
 import time
 import shutil
 import zmq
+import pexpect
 
 __author__ = 'sposs'
 
@@ -36,10 +37,10 @@ class Monitor(threading.Thread):
     """
     This thing takes care of monitoring
     """
-    def __init__(self, process):
+    def __init__(self, process_id):
         threading.Thread.__init__(self)
         self.running = True
-        self.process = process
+        self.process = psutil.Process(process_id)
         self.peak = 0
         self.avg = 0
         context = zmq.Context.instance()
@@ -116,21 +117,28 @@ class Runner(object):
         # now execute matlabscript
         now = datetime.datetime.utcnow()
 
-        self.process = psutil.Popen(["matlabscript2014", "-n", str(pdict["nicenessVal"]), "-c",
-                                    str(pdict["cpuRangeVal"]), "LinTimelyOscSolCurrent"], stderr=subprocess.PIPE,
-                                    stdout=subprocess.PIPE)
-        mon = Monitor(self.process)
+        self.process = pexpect.spawn(" ".join(["matlabscript2014", "-n", str(pdict["nicenessVal"]), "-c",
+                                               str(pdict["cpuRangeVal"]), "LinTimelyOscSolCurrent"]))
+        mon = Monitor(self.process.pid)
         mon.start()
-        (stdout, stderr) = self.process.communicate()
-        self.process.wait()
+        fout = open('mylog.txt', 'wb')
+        self.process.logfile = fout
+        index = self.process.expect(['>>', pexpect.EOF])
+        if index == 0:
+            self.log.error("Error found")
+            self.process.sendline("exit")
+        if index == 1:
+            self.log.info("Process completed")
         mon.stop()
         mon.join()
+        fout.close()
         result = {}
         result.update(mon.get_stats())
         delta = datetime.datetime.utcnow() - now
         result["Wallclock"] = str(delta)
-        result["StdOut"] = stdout
-        result["StdErr"] = stderr
+        with open("mylog.txt", "rb") as logf:
+            result["StdOut"] = logf.read()
+        result["StdErr"] = ""
         os.chdir(curdir)
         return result
 
@@ -140,7 +148,8 @@ class Runner(object):
         :return: None
         """
         self.log.info("Killing program")
-        for child in self.process.children(True):
+        proc = psutil.Process(self.process.pid)
+        for child in proc.children(True):
             child.kill()
         self.process.kill()
 

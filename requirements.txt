@@ -2,3 +2,4 @@ pbr
 psutil
 jsonrpclib
 pyzmq
+pexpect

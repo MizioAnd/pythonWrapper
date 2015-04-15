@@ -118,7 +118,7 @@ class Runner(object):
         now = datetime.datetime.utcnow()
 
         self.process = pexpect.spawn(" ".join(["matlabscript2014", "-n", str(pdict["nicenessVal"]), "-c",
-                                               str(pdict["cpuRangeVal"]), "LinTimelyOscSolCurrent"]))
+                                               str(pdict["cpuRangeVal"]), "LinTimelyOscSolCurrent"]), timeout=3e6)
         mon = Monitor(self.process.pid)
         mon.start()
         fout = open('mylog.txt', 'wb')

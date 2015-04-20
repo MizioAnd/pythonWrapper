@@ -126,6 +126,7 @@ class Runner(object):
         index = self.process.expect(['>>', pexpect.EOF])
         if index == 0:
             self.log.error("Error found")
+            self.process.sendline("save([%s]);" % pdict.get("environmentName", "default.mat"))
             self.process.sendline("exit")
         if index == 1:
             self.log.info("Process completed")

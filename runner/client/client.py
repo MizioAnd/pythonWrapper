@@ -123,6 +123,6 @@ class Client(object):
 
 if __name__ == "__main__":
     c = Client("th1.mpq.univ-paris-diderot.fr", 47801)
-    c.set_parameters({"nicenessVal": 0, "cpuRangeVal": "0-2", "outputDir": "some_other_dir"})
+    c.set_parameters({"nicenessVal": 0, "cpuRangeVal": "0-2", "outputDir": "some_other_dir"})  #, "environmentName": "myenv.mat})
     c.commit("/Users/mizio/Documents/MizioSpatafora/stefMount/Documents/current", "Another test message")
     c.execute()
